@@ -140,16 +140,22 @@ public class GameManager : MonoBehaviour
 
 		m_hunterPowerDurationRemaining = Mathf.Clamp (m_hunterPowerDurationRemaining, 0, hunterPowerDuration);
 
-		if (m_preyPower) {
-			m_preyPowerDurationRemaining -= Time.deltaTime;
+		Debug.Log ("remaining: " + m_preyPowerDurationRemaining);
+
+		if (m_preyPower && m_preyPowerDurationRemaining > 0) {
+			m_preyPowerDurationRemaining -= Time.deltaTime; 
 			if (Input.GetKeyDown ("b")) {
 				StopCoroutine ("Heartbeat");
 				prey.GetComponent<Renderer> ().material.color = new Color (0.09f, 0.4f, 0, 1);
 			}
 		} else {
-			m_preyPowerDurationRemaining += Time.deltaTime / abilityRegenRate;
-			if (Input.GetKeyUp ("b")) {
+			if (Input.GetKeyUp ("b") || m_preyPowerDurationRemaining <= 0) {
+				Debug.Log ("started: " + m_preyPowerDurationRemaining);
 				StartCoroutine ("Heartbeat");
+			}
+
+			if (!m_preyPower) {
+				m_preyPowerDurationRemaining += Time.deltaTime / abilityRegenRate;
 			}
 		}
 
