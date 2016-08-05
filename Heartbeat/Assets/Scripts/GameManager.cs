@@ -4,6 +4,11 @@ using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
+	public Light heartbeatLight;
+	public float heartbeatFadeRate;
+	public float heartbeatGrowRate;
+	public float heartbeatIntensityModifier;
+
 	public Transform hunter;
 	public Transform prey;
 
@@ -29,6 +34,8 @@ public class GameManager : MonoBehaviour
 
 	private GAMESTATE currentState;
 
+	private Coroutine heartbeatFaderCoroutine;
+
 	private enum GAMESTATE
 	{
 		PRE_GAME,
@@ -41,7 +48,7 @@ public class GameManager : MonoBehaviour
 		get {
 			float speed = playerMovement * Time.deltaTime;
 
-			if (m_hunterPower && m_hunterPowerDurationRemaining > 0) {
+			if (HunterPowerEnabled ()) {
 				speed += hunterPowerSpeedBoost;
 			}
 				
@@ -55,6 +62,8 @@ public class GameManager : MonoBehaviour
 	// Use this for initialization
 	void Start ()
 	{
+		heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (0, 1));
+		StopCoroutine (heartbeatFaderCoroutine);
 		StartCoroutine ("Heartbeat");
 
 		currentState = GAMESTATE.GAME;
@@ -110,16 +119,17 @@ public class GameManager : MonoBehaviour
 
 		string time = timeArray [0].Replace ("-", "") + ".";
 
-		int size = (timeArray [1].Length > 2) ? 2 : timeArray [1].Length;
-
-		time += timeArray [1].Substring (0, size);
+		//Error checking for when the time is a whole number with no decimal point
+		if (timeArray.Length > 1) {
+			int size = (timeArray [1].Length > 2) ? 2 : timeArray [1].Length;
+			time += timeArray [1].Substring (0, size);
+		}
 
 		timeCounter.text = time;
 	}
 
 	void UpdateAbilityTimers ()
 	{
-		//put in hotkeys for powers
 		if (Input.GetKey ("space")) {
 			m_hunterPower = true;
 		} else {
@@ -140,40 +150,70 @@ public class GameManager : MonoBehaviour
 
 		m_hunterPowerDurationRemaining = Mathf.Clamp (m_hunterPowerDurationRemaining, 0, hunterPowerDuration);
 
-		Debug.Log ("remaining: " + m_preyPowerDurationRemaining);
-
-		if (m_preyPower && m_preyPowerDurationRemaining > 0) {
+		if (m_preyPower) {
 			m_preyPowerDurationRemaining -= Time.deltaTime; 
-			if (Input.GetKeyDown ("b")) {
-				StopCoroutine ("Heartbeat");
-				prey.GetComponent<Renderer> ().material.color = new Color (0.09f, 0.4f, 0, 1);
-			}
 		} else {
-			if (Input.GetKeyUp ("b") || m_preyPowerDurationRemaining <= 0) {
-				Debug.Log ("started: " + m_preyPowerDurationRemaining);
-				StartCoroutine ("Heartbeat");
-			}
-
-			if (!m_preyPower) {
-				m_preyPowerDurationRemaining += Time.deltaTime / abilityRegenRate;
-			}
+			m_preyPowerDurationRemaining += Time.deltaTime / abilityRegenRate;
 		}
 
 		m_preyPowerDurationRemaining = Mathf.Clamp (m_preyPowerDurationRemaining, 0, preyPowerDuration);
 	}
 
+	float Intensity {
+		get {
+			return heartbeatIntensityModifier * (1 / m_realDistance);
+		}
+	}
+
 	IEnumerator Heartbeat ()
 	{
+		StopCoroutine (heartbeatFaderCoroutine);
+		heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (0, heartbeatFadeRate));
 		prey.GetComponent<Renderer> ().material.color = new Color (0.09f, 0.4f, 0, 1); 
 
 		yield return new WaitForSeconds (m_duration);
 
-		prey.GetComponent<Renderer> ().material.color = new Color (1, 1, 1, 1);
+		if (!PreyPowerEnabled ()) {
+			StopCoroutine (heartbeatFaderCoroutine);
+			heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (Intensity, heartbeatGrowRate));
+			prey.GetComponent<Renderer> ().material.color = new Color (1, 1, 1, 1);
+		}
+
+		yield return new WaitForSeconds (m_duration / 3);
+
+		StopCoroutine (heartbeatFaderCoroutine);
+		heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (0, heartbeatFadeRate));
+		prey.GetComponent<Renderer> ().material.color = new Color (0.09f, 0.4f, 0, 1); 
+
+		yield return new WaitForSeconds (m_duration / 3);
+
+		if (!PreyPowerEnabled ()) {
+			StopCoroutine (heartbeatFaderCoroutine);
+			heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (Intensity, heartbeatGrowRate));
+			prey.GetComponent<Renderer> ().material.color = new Color (1, 1, 1, 1);
+		}
 
 		yield return new WaitForSeconds (m_duration / 3);
 
 		if (currentState == GAMESTATE.GAME) {
 			StartCoroutine ("Heartbeat");
 		}
+	}
+
+	IEnumerator HeartbeatLightFader (float intensity, float duration)
+	{
+		heartbeatLight.intensity = Mathf.Lerp (heartbeatLight.intensity, intensity, duration);
+		yield return new WaitForFixedUpdate ();
+		heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (intensity, duration));
+	}
+
+	private bool PreyPowerEnabled ()
+	{
+		return (m_preyPower && m_preyPowerDurationRemaining > 0);
+	}
+
+	private bool HunterPowerEnabled ()
+	{
+		return (m_hunterPower && m_hunterPowerDurationRemaining > 0);
 	}
 }
