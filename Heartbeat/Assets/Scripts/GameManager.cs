@@ -12,6 +12,8 @@ public class GameManager : MonoBehaviour
 	public Transform hunter;
 	public Transform prey;
 
+	public GameObject winGroup;
+
 	public float playerMovement;
 	public float baseHeartbeatRate;
 	public float heartbeatDistanceModifier;
@@ -22,6 +24,7 @@ public class GameManager : MonoBehaviour
 	public float abilityRegenRate;
 
 	public Text timeCounter;
+	public Text winText;
 
 	private float m_realDistance;
 	private float m_duration;
@@ -31,6 +34,12 @@ public class GameManager : MonoBehaviour
 	private bool m_hunterPower;
 	private float m_hunterPowerDurationRemaining;
 	private float m_preyPowerDurationRemaining;
+
+	float Intensity {
+		get {
+			return heartbeatIntensityModifier * (1 / m_realDistance);
+		}
+	}
 
 	private GAMESTATE currentState;
 
@@ -54,8 +63,12 @@ public class GameManager : MonoBehaviour
 				
 			return speed;
 		}
-		set {
-			playerMovement = value;
+	}
+
+	public float CalculatedPreyMovement {
+		get {
+			float speed = playerMovement * Time.deltaTime;
+			return speed;
 		}
 	}
 
@@ -80,25 +93,33 @@ public class GameManager : MonoBehaviour
 		if (currentState != GAMESTATE.GAME) {
 			return;
 		}
-
+	
 		UpdateAbilityTimers ();
+		UpdatePreyMovement ();
 		UpdateHunterMovement ();
 		WinCondition ();
 	}
 
+	void UpdatePreyMovement ()
+	{
+		float horizontal = Input.GetAxisRaw ("PreyHorizontal");
+		float vertical = Input.GetAxisRaw ("PreyVertical"); 
+		prey.Translate (new Vector3 (horizontal * CalculatedPreyMovement, vertical * CalculatedPreyMovement, 0));
+	}
+
 	void UpdateHunterMovement ()
 	{
-		float horizontal = Input.GetAxisRaw ("Horizontal");
-		float vertical = Input.GetAxisRaw ("Vertical");
-		hunter.transform.Translate (new Vector3 (horizontal * CalculatedHunterMovement, vertical * CalculatedHunterMovement, 0));
+		float horizontal = Input.GetAxisRaw ("HunterHorizontal");
+		float vertical = Input.GetAxisRaw ("HunterVertical");
+		hunter.Translate (new Vector3 (horizontal * CalculatedHunterMovement, vertical * CalculatedHunterMovement, 0));
 
-		float xDistance = hunter.transform.position.x - prey.transform.position.x;
-		float yDistance = hunter.transform.position.y - prey.transform.position.y;
+		float xDistance = hunter.position.x - prey.position.x;
+		float yDistance = hunter.position.y - prey.position.y;
 		m_realDistance = Mathf.Sqrt ((xDistance * xDistance) + (yDistance * yDistance));
 
 		m_duration = baseHeartbeatRate * m_realDistance - (heartbeatDistanceModifier * (1 / m_realDistance));
 
-		m_duration = Mathf.Clamp (m_duration, 0.05f, 1);
+		m_duration = Mathf.Clamp (m_duration, 0.05f, 0.3f);
 	}
 
 	void WinCondition ()
@@ -106,6 +127,9 @@ public class GameManager : MonoBehaviour
 		if (m_realDistance <= hunter.transform.localScale.x) {
 			Debug.Log ("Hunter has won");
 			currentState = GAMESTATE.HUNTER_WIN;
+			winText.text = "Hunter wins!";
+			winText.color = new Color (0.81f, 0.58f, 0.94f);
+			winGroup.SetActive (true);
 		}
 
 		m_timeRemaining -= Time.deltaTime;
@@ -113,6 +137,9 @@ public class GameManager : MonoBehaviour
 		if (m_timeRemaining <= 0) {
 			Debug.Log ("Prey has won");
 			currentState = GAMESTATE.PREY_WIN;
+			winText.text = "Prey wins!";
+			winText.color = new Color (0.09f, 0.4f, 0, 1);
+			winGroup.SetActive (true);
 		}
 			
 		string[] timeArray = m_timeRemaining.ToString ().Split ('.');
@@ -157,12 +184,6 @@ public class GameManager : MonoBehaviour
 		}
 
 		m_preyPowerDurationRemaining = Mathf.Clamp (m_preyPowerDurationRemaining, 0, preyPowerDuration);
-	}
-
-	float Intensity {
-		get {
-			return heartbeatIntensityModifier * (1 / m_realDistance);
-		}
 	}
 
 	IEnumerator Heartbeat ()
@@ -215,5 +236,16 @@ public class GameManager : MonoBehaviour
 	private bool HunterPowerEnabled ()
 	{
 		return (m_hunterPower && m_hunterPowerDurationRemaining > 0);
+	}
+
+	public void RestartGame ()
+	{
+		StopCoroutine (heartbeatFaderCoroutine);
+		heartbeatLight.intensity = 0;
+		prey.position = new Vector2 (0, -9.5f);
+		hunter.position = new Vector2 (0, 9.5f);
+		winGroup.SetActive (false);
+	
+		Start ();
 	}
 }
