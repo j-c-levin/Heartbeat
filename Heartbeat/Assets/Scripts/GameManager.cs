@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿#define use_keyboard
+
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 
@@ -29,11 +31,16 @@ public class GameManager : MonoBehaviour
 	private float m_realDistance;
 	private float m_duration;
 	private float m_timeRemaining;
+	private float m_hunterPowerDurationRemaining;
+	private float m_preyPowerDurationRemaining;
+	private float m_hunterRightMovement;
+	private float m_hunterUpMovement;
+	private float m_preyRightMovement;
+	private float m_preyUpMovement;
 
 	private bool m_preyPower;
 	private bool m_hunterPower;
-	private float m_hunterPowerDurationRemaining;
-	private float m_preyPowerDurationRemaining;
+
 
 	float Intensity {
 		get {
@@ -102,15 +109,33 @@ public class GameManager : MonoBehaviour
 
 	void UpdatePreyMovement ()
 	{
-		float horizontal = Input.GetAxisRaw ("PreyHorizontal");
-		float vertical = Input.GetAxisRaw ("PreyVertical"); 
+		float horizontal = 0;
+		float vertical = 0;
+
+		#if use_keyboard
+		horizontal = Input.GetAxisRaw ("PreyHorizontal");
+		vertical = Input.GetAxisRaw ("PreyVertical"); 
+		#else
+		horizontal = m_preyRightMovement;
+		vertical = m_preyUpMovement;
+		#endif
+
 		prey.Translate (new Vector3 (horizontal * CalculatedPreyMovement, vertical * CalculatedPreyMovement, 0));
 	}
 
 	void UpdateHunterMovement ()
 	{
-		float horizontal = Input.GetAxisRaw ("HunterHorizontal");
-		float vertical = Input.GetAxisRaw ("HunterVertical");
+		float horizontal = 0;
+		float vertical = 0;
+
+		#if use_keyboard
+		horizontal = Input.GetAxisRaw ("HunterHorizontal");
+		vertical = Input.GetAxisRaw ("HunterVertical");
+		#else 
+		horizontal = m_hunterRightMovement;
+		vertical = m_hunterUpMovement;
+		#endif
+
 		hunter.Translate (new Vector3 (horizontal * CalculatedHunterMovement, vertical * CalculatedHunterMovement, 0));
 
 		float xDistance = hunter.position.x - prey.position.x;
@@ -157,13 +182,13 @@ public class GameManager : MonoBehaviour
 
 	void UpdateAbilityTimers ()
 	{
-		if (Input.GetKey ("space")) {
+		if (Input.GetKey ("f")) {
 			m_hunterPower = true;
 		} else {
 			m_hunterPower = false;
 		}
 
-		if (Input.GetKey ("b")) {
+		if (Input.GetKey (";")) {
 			m_preyPower = true;
 		} else {
 			m_preyPower = false;
@@ -247,5 +272,17 @@ public class GameManager : MonoBehaviour
 		winGroup.SetActive (false);
 	
 		Start ();
+	}
+
+	public void SetHunterMovement (float rightDirection, float upDirection)
+	{
+		m_hunterRightMovement = rightDirection;
+		m_hunterUpMovement = upDirection;
+	}
+
+	public void SetPreyMovement (float rightDirection, float upDirection)
+	{
+		m_preyRightMovement = rightDirection;
+		m_preyUpMovement = upDirection;
 	}
 }
