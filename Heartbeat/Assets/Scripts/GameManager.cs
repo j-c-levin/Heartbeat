@@ -1,4 +1,4 @@
-﻿//#define use_keyboard
+﻿#define use_keyboard
 
 using UnityEngine;
 using UnityEngine.UI;
