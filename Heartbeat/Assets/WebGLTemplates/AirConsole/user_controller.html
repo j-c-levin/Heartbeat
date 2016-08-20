@@ -54,7 +54,7 @@
       <div id="template-ButtonMiddle" class="button-80"><div class="button-text">START</div></div>
     </div>
 
-<script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.3.0.js"></script>
+<script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.4.0.js"></script>
 <script type="text/javascript" src="airconsole-controls/rate-limiter/rate-limiter.js"></script>
 <script type="text/javascript" src="airconsole-controls/dpad/dpad.js"></script>
 <script type="text/javascript" src="airconsole-controls/joystick/joystick.js"></script>
@@ -66,5 +66,5 @@
 <script type="text/javascript">
 var airconsole = new AirConsole({orientation: AirConsole.ORIENTATION_LANDSCAPE});
 CtrlGenerator.setAirConsole(airconsole);
-CtrlGenerator.generate({"left":{"type":{"label":"Joystick","class_name":"Joystick"}},"middle":[],"right":[{"type":{"label":"ButtonVertical","class_name":"Button"},"label":"Special","key":"Special","on_up_message":false}]});
+CtrlGenerator.generate({"left":{"type":{"label":"Joystick","class_name":"Joystick"}},"middle":[],"right":[{"type":{"label":"ButtonVertical","class_name":"Button"},"label":"special","key":"special","on_up_message":true}]});
 </script></body></html>

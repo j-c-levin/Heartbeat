@@ -1,4 +1,4 @@
-﻿#define use_keyboard
+﻿//#define use_keyboard
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -182,6 +182,7 @@ public class GameManager : MonoBehaviour
 
 	void UpdateAbilityTimers ()
 	{
+		#if use_keyboard
 		if (Input.GetKey ("f")) {
 			m_hunterPower = true;
 		} else {
@@ -193,6 +194,7 @@ public class GameManager : MonoBehaviour
 		} else {
 			m_preyPower = false;
 		}
+		#endif
 
 		if (m_hunterPower) {
 			m_hunterPowerDurationRemaining -= Time.deltaTime;
@@ -284,5 +286,10 @@ public class GameManager : MonoBehaviour
 	{
 		m_preyRightMovement = rightDirection;
 		m_preyUpMovement = upDirection;
+	}
+
+	public void SetHunterPower (bool value)
+	{
+		m_hunterPower = value;
 	}
 }

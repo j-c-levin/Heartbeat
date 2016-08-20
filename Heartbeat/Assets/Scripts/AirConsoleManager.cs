@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 public class AirConsoleManager : MonoBehaviour
 {
-	private GameManager gameManager;
+	private GameManager m_gameManager;
 
 	void Awake ()
 	{
@@ -16,7 +16,7 @@ public class AirConsoleManager : MonoBehaviour
 
 	void Start ()
 	{
-		gameManager = GetComponent<GameManager> ();
+		m_gameManager = GetComponent<GameManager> ();
 	}
 
 	void SetupAirConsoleEvents ()
@@ -36,21 +36,43 @@ public class AirConsoleManager : MonoBehaviour
 
 	void OnReady (string code)
 	{
-
+		Debug.Log ("Ready: " + code);
 	}
 
 	void OnMessage (int from, JToken data)
+	{ 
+		if ((object)data ["joystick-left"] != null) {
+			ReceivedMovement (from, data);
+			return;
+		}
+
+		if ((object)data ["special"] != null) {
+			ReceivedSpecial (from, data);
+			return;
+		}
+
+		Debug.LogError ("unknown input: " + data.ToString ());
+	}
+
+	void ReceivedMovement (int from, JToken data)
 	{
-		Debug.Log ("Received from: " + from + " data: " + data.ToString ());
-		AirConsole.instance.Message (from, "Full of pixels!");
+		if (!(bool)data ["joystick-left"] ["pressed"]) { 
+			m_gameManager.SetHunterMovement (0, 0);
+			return;
+		}
 
 		//Update player movement
-		gameManager.SetHunterMovement ((float)data ["rightMovement"], (float)data ["upMovement"]);
+		m_gameManager.SetHunterMovement ((float)data ["joystick-left"] ["message"] ["x"], -(float)data ["joystick-left"] ["message"] ["y"]);
+	}
+
+	void ReceivedSpecial (int from, JToken data)
+	{
+		m_gameManager.SetHunterPower ((bool)data ["special"] ["pressed"]);
 	}
 
 	void OnConnect (int device_id)
 	{
-
+		AirConsole.instance.Message (device_id, "Hello back!");
 	}
 
 	void OnDisconnect (int device_id)
