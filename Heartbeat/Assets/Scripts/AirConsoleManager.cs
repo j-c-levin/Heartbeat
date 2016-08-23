@@ -57,27 +57,28 @@ public class AirConsoleManager : MonoBehaviour
 	void ReceivedMovement (int from, JToken data)
 	{
 		if (!(bool)data ["joystick-left"] ["pressed"]) { 
-			m_gameManager.SetHunterMovement (0, 0);
+			m_gameManager.SetPlayerMovement (from, 0, 0);
 			return;
 		}
 
 		//Update player movement
-		m_gameManager.SetHunterMovement ((float)data ["joystick-left"] ["message"] ["x"], -(float)data ["joystick-left"] ["message"] ["y"]);
+		m_gameManager.SetPlayerMovement (from, (float)data ["joystick-left"] ["message"] ["x"], -(float)data ["joystick-left"] ["message"] ["y"]);
 	}
 
 	void ReceivedSpecial (int from, JToken data)
 	{
-		m_gameManager.SetHunterPower ((bool)data ["special"] ["pressed"]);
+		m_gameManager.SetPlayerPower (from, (bool)data ["special"] ["pressed"]);
 	}
 
 	void OnConnect (int device_id)
 	{
-		AirConsole.instance.Message (device_id, "Hello back!");
+		Debug.Log ("New device connected: " + device_id);
+		m_gameManager.OnPlayerConnected (device_id);
 	}
 
 	void OnDisconnect (int device_id)
 	{
-
+		Debug.LogError ("Device disconnected and this is not handled");
 	}
 
 	void OnDeviceStateChange (int device_id, JToken data)

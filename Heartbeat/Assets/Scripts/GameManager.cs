@@ -1,4 +1,5 @@
-﻿#define use_keyboard
+﻿//#define use_keyboard
+//#define local_testing
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,6 +7,33 @@ using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
+	private enum GAMESTATE
+	{
+		PRE_GAME,
+		GAME,
+		HUNTER_WIN,
+		PREY_WIN
+	}
+
+	public float CalculatedHunterMovement {
+		get {
+			float speed = playerMovement * Time.deltaTime;
+
+			if (HunterPowerEnabled ()) {
+				speed += hunterPowerSpeedBoost;
+			}
+
+			return speed;
+		}
+	}
+
+	public float CalculatedPreyMovement {
+		get {
+			float speed = playerMovement * Time.deltaTime;
+			return speed;
+		}
+	}
+
 	public Light heartbeatLight;
 	public float heartbeatFadeRate;
 	public float heartbeatGrowRate;
@@ -41,6 +69,8 @@ public class GameManager : MonoBehaviour
 	private bool m_preyPower;
 	private bool m_hunterPower;
 
+	private int m_hunterID = -1;
+	private int m_preyID = -1;
 
 	float Intensity {
 		get {
@@ -52,46 +82,14 @@ public class GameManager : MonoBehaviour
 
 	private Coroutine heartbeatFaderCoroutine;
 
-	private enum GAMESTATE
-	{
-		PRE_GAME,
-		GAME,
-		HUNTER_WIN,
-		PREY_WIN
-	}
-
-	public float CalculatedHunterMovement {
-		get {
-			float speed = playerMovement * Time.deltaTime;
-
-			if (HunterPowerEnabled ()) {
-				speed += hunterPowerSpeedBoost;
-			}
-				
-			return speed;
-		}
-	}
-
-	public float CalculatedPreyMovement {
-		get {
-			float speed = playerMovement * Time.deltaTime;
-			return speed;
-		}
-	}
-
 	// Use this for initialization
 	void Start ()
 	{
-		heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (0, 1));
-		StopCoroutine (heartbeatFaderCoroutine);
-		StartCoroutine ("Heartbeat");
-
-		currentState = GAMESTATE.GAME;
-
-		m_timeRemaining = roundDuration;
-
-		m_hunterPowerDurationRemaining = hunterPowerDuration / 2;
-		m_preyPowerDurationRemaining = preyPowerDuration / 2;
+		#if local_testing
+		startGame();
+		#else
+		currentState = GAMESTATE.PRE_GAME;
+		#endif
 	}
 
 	// Update is called once per frame
@@ -105,6 +103,47 @@ public class GameManager : MonoBehaviour
 		UpdatePreyMovement ();
 		UpdateHunterMovement ();
 		WinCondition ();
+	}
+
+	public void OnPlayerConnected (int deviceID)
+	{
+		if (m_hunterID == -1) {
+			Debug.Log ("setting as hunter");
+			//set hunter
+			m_hunterID = deviceID;
+		} else {
+			Debug.Log ("setting as prey");
+			//set prey
+			m_preyID = deviceID;
+
+			Debug.Log ("starting game");
+			StartGame ();
+		}
+	}
+
+	void StartGame ()
+	{
+		currentState = GAMESTATE.GAME;
+
+		heartbeatFaderCoroutine = StartCoroutine (HeartbeatLightFader (0, 1));
+		StopCoroutine (heartbeatFaderCoroutine);
+		StartCoroutine ("Heartbeat");
+
+		m_timeRemaining = roundDuration;
+
+		m_hunterPowerDurationRemaining = hunterPowerDuration / 2;
+		m_preyPowerDurationRemaining = preyPowerDuration / 2;
+	}
+
+	public void RestartGame ()
+	{
+		StopCoroutine (heartbeatFaderCoroutine);
+		heartbeatLight.intensity = 0;
+		prey.position = new Vector2 (0, -9.5f);
+		hunter.position = new Vector2 (0, 9.5f);
+		winGroup.SetActive (false);
+
+		StartGame ();
 	}
 
 	void UpdatePreyMovement ()
@@ -149,6 +188,7 @@ public class GameManager : MonoBehaviour
 
 	void WinCondition ()
 	{
+		Debug.Log ("distance: " + m_realDistance);
 		if (m_realDistance <= hunter.transform.localScale.x) {
 			Debug.Log ("Hunter has won");
 			currentState = GAMESTATE.HUNTER_WIN;
@@ -265,31 +305,27 @@ public class GameManager : MonoBehaviour
 		return (m_hunterPower && m_hunterPowerDurationRemaining > 0);
 	}
 
-	public void RestartGame ()
+	public void SetPlayerMovement (int deviceID, float rightDirection, float upDirection)
 	{
-		StopCoroutine (heartbeatFaderCoroutine);
-		heartbeatLight.intensity = 0;
-		prey.position = new Vector2 (0, -9.5f);
-		hunter.position = new Vector2 (0, 9.5f);
-		winGroup.SetActive (false);
-	
-		Start ();
+		if (deviceID == m_hunterID) {
+			m_hunterRightMovement = rightDirection;
+			m_hunterUpMovement = upDirection;
+		} else if (deviceID == m_preyID) {
+			m_preyRightMovement = rightDirection;
+			m_preyUpMovement = upDirection;
+		} else {
+			Debug.LogError ("Unknown device id: " + deviceID);
+		}
 	}
 
-	public void SetHunterMovement (float rightDirection, float upDirection)
+	public void SetPlayerPower (int deviceID, bool value)
 	{
-		m_hunterRightMovement = rightDirection;
-		m_hunterUpMovement = upDirection;
-	}
-
-	public void SetPreyMovement (float rightDirection, float upDirection)
-	{
-		m_preyRightMovement = rightDirection;
-		m_preyUpMovement = upDirection;
-	}
-
-	public void SetHunterPower (bool value)
-	{
-		m_hunterPower = value;
+		if (deviceID == m_hunterID) {
+			m_hunterPower = value;
+		} else if (deviceID == m_preyID) {
+			m_preyPower = value;
+		} else {
+			Debug.LogError ("Unknown device id: " + deviceID);
+		}
 	}
 }
